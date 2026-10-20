@@ -5,13 +5,19 @@
 Wydajny, desktopowy menedżer multimediów YouTube dla systemu Windows.  
 Wielowątkowa kolejka zadań, selektywny bufor playlist, konwersja do MP3 oraz obsługa formatów panoramicznych.
 
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows)](https://github.com)
-[![Architecture](https://img.shields.io/badge/Architecture-x64-555555?style=flat-square)](https://github.com)
-[![Release](https://img.shields.io/badge/Release-v1.0.0-blue?style=flat-square)](https://github.com)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-
 </div>
 
+---
+
+## Spis treści
+
+- [Prezentacja interfejsu](#prezentacja-interfejsu)
+- [Funkcjonalności](#funkcjonalności)
+- [Architektura i wyzwania inżynieryjne](#architektura-i-wyzwania-inżynieryjne)
+- [Struktura projektu](#struktura-projektu)
+- [Wdrożenie i uruchomienie](#wdrożenie-i-uruchomienie)
+- [Stos technologiczny](#stos-technologiczny)
+- [Plan rozwoju (Roadmap)](#plan-rozwoju-roadmap)
 ---
 
 ## Prezentacja interfejsu
@@ -29,12 +35,11 @@ Lokalny cache metadanych w pamięci RAM pozwalający na zaznaczanie wybranych po
 </p>
 
 ### 3. Rejestr historii pobrań
-Baza lokalna z historią ukończonych pobrań, etykietami formatów oraz szybkim dostępem do plików.
+Baza lokalna z historią ukończonych pobrań, etykietami formatów oraz szybkim dostępem do plików na dysku.
 <p align="center">
   <img src="assets/preview-history.png" alt="Rejestr historii pobrań" width="100%">
 </p>
 
----
 ---
 
 ## Funkcjonalności
@@ -45,20 +50,21 @@ Baza lokalna z historią ukończonych pobrań, etykietami formatów oraz szybkim
 
 ### Pobieranie i konwersja
 
-- **Profile rozdzielczości**: od 480p, przez 720p, 1080p i 1440p, aż do 4K (2160p), scalane przez FFmpeg.
+- **Profile rozdzielczości**: od 480p, przez 720p, 1080p i 1440p, aż do 4K (2160p), scalane asynchronicznie przez FFmpeg.
 - **Ekstrakcja MP3**: konwersja strumienia audio do 192 kbps wraz z okładką albumu w tagach ID3.
-- **Wielowątkowość**: asynchroniczna kolejka pobierania (`ThreadPoolExecutor`) chroniąca GUI przed zawieszeniem.
-- **Detekcja duplikatów**: weryfikacja obecności pliku na dysku zapobiega ponownemu pobieraniu tych samych danych.
-- **Sprzątanie przerwanych zadań**: bezpieczne usuwanie pozostałości plików tymczasowych (`.part`, `.ytdl`).
+- **Wielowątkowość**: dedykowana kolejka pobierania (`ThreadPoolExecutor`) chroniąca interfejs użytkownika przed zamrożeniem.
+- **Detekcja duplikatów**: weryfikacja fizycznej obecności pliku na dysku zapobiega nadpisywaniu i ponownemu pobieraniu tych samych danych.
+- **Sprzątanie przerwanych zadań**: bezpieczne usuwanie pozostałości plików tymczasowych (`.part`, `.ytdl`) po anulowaniu lub błędzie.
+- **Filmy niepubliczne**: pełna obsługa bezpośrednich linków do filmów ze statusem *Unlisted*.
 
 </td>
 <td width="33%" valign="top">
 
 ### Zaawansowane playlisty
 
-- **Interaktywny selektor**: opcja pobrania całej playlisty lub wskazania konkretnych pozycji.
-- **Buforowanie w pamięci (RAM cache)**: jednokrotnie pobrana playlista otwiera się natychmiast, bez kolejnych zapytań sieciowych.
-- **Pełna responsywność wiersza**: kliknięcie w dowolne miejsce elementu listy przełącza stan zaznaczenia.
+- **Interaktywny selektor**: opcja pobrania całej playlisty lub wskazania konkretnych pozycji przed rozpoczęciem transferu.
+- **Buforowanie w pamięci (RAM cache)**: jednokrotnie pobrana playlista otwiera się natychmiast, bez powtórnych zapytań sieciowych.
+- **Pełna responsywność wiersza**: kliknięcie w dowolne miejsce kafelka przełącza stan zaznaczenia elementu.
 - **Podsumowania z fleksją**: zliczanie fizycznie pobranych plików z zachowaniem polskiej odmiany (`1 utwór`, `3 utwory`, `12 utworów`).
 
 </td>
@@ -66,11 +72,11 @@ Baza lokalna z historią ukończonych pobrań, etykietami formatów oraz szybkim
 
 ### Automatyzacja i UX
 
-- **Inteligentny schowek**: najechanie kursorem na pole adresu weryfikuje schowek i wkleja poprawny URL bez `Ctrl+V`.
+- **Inteligentny schowek**: najechanie kursorem na pole adresu weryfikuje schowek systemowy i automatycznie wkleja poprawny URL bez `Ctrl+V`.
 - **Sanityzacja adresów**: automatyczne odcinanie parametrów śledzących z zachowaniem identyfikatorów wideo i playlist.
 - **Filtrowanie na żywo**: dynamiczne wyszukiwanie w historii pobranych plików w czasie rzeczywistym.
-- **Retencja ustawień**: automatyczny zapis ścieżki docelowej oraz preferencji formatu w pliku konfiguracyjnym.
-- **Telemetria**: precyzyjny odczyt prędkości, pobranych megabajtów, ETA oraz etapu scalania strumieni.
+- **Retencja ustawień**: automatyczny zapis ścieżki docelowej oraz preferencji formatu w pliku konfiguracyjnym (`settings.json`).
+- **Telemetria**: precyzyjny odczyt prędkości transferu, pobranych megabajtów, ETA oraz etapu scalania strumieni.
 
 </td>
 </tr>
@@ -90,7 +96,8 @@ Domyślne metadane platformy operują na bezwzględnych pozycjach utworów w obr
 W warstwie `QueueManager` zaimplementowano lokalny licznik sekwencji sesyjnej:
 
 - oddziela fizyczny indeks utworu w serwisie od stanu bieżącej kolejki,
-- prezentuje czytelną dla użytkownika numerację `[1/4]... [4/4]`.
+- prezentuje czytelną dla użytkownika numerację `[1/4]... [4/4]`,
+- wyklucza zadania anulowane z bazy historii, eliminując błędy odwołań do niekompletnych plików.
 
 </details>
 
@@ -127,7 +134,7 @@ Rozwiązano to poprzez dwufazowe przetwarzanie:
 
 Pętla główna interfejsu (`MainThread`) nie wykonuje żadnych blokujących operacji wejścia/wyjścia ani zapytań sieciowych. Wszystkie operacje realizowane są w tle i raportowane przez kolejkę komunikatów `EventBus`.
 
-Przejście do widoków modalnych (np. selekcja utworów) blokuje kontrolki nadrzędne, uniemożliwiając równoległe wywołanie kolidujących operacji.
+Przejście do widoków modalnych (np. selekcja utworów) blokuje kontrolki nadrzędne, uniemożliwiając równoległe wywołanie kolidujących operacji, a anulowane wątki pobierania poprawnie zwalniają uchwyty i czyszczą karty zadań.
 
 </details>
 
@@ -137,6 +144,11 @@ Przejście do widoków modalnych (np. selekcja utworów) blokuje kontrolki nadrz
 
 ```text
 youtube-downloader/
+│
+├── assets/                 # Zrzuty ekranu dokumentujące interfejs użytkownika
+│   ├── preview-queue.png
+│   ├── preview-selection.png
+│   └── preview-history.png
 │
 ├── core/
 │   ├── downloader.py       # Silnik pobierania, integracja yt-dlp i FFmpeg
@@ -156,9 +168,9 @@ youtube-downloader/
 │   ├── history.py          # Lokalna baza danych pobranych pozycji
 │   └── paths.py            # Rozwiązywanie ścieżek systemowych i lokalizacji FFmpeg
 │
-├── main.py                 # Punkt wejścia do aplikacji
-├── requirements.txt        # Spis zależności bibliotecznych
-└── settings.json           # Automatycznie generowane ustawienia programu
+├── .gitignore              # Reguły wykluczeń dla środowiska, binariów i cache
+├── main.py                 # Główny punkt wejścia do aplikacji
+└── requirements.txt        # Jawny spis zależności produkcyjnych
 ```
 
 ---
@@ -177,7 +189,7 @@ Dedykowana dla użytkowników końcowych, bez wymagań systemowych.
 2. Pobierz najnowszy plik **`YouTubeDownloader.exe`**.
 3. Uruchom program dwuklikiem.
 
-> **Uwaga:** binaria FFmpeg oraz środowisko wykonawcze zostały skonsolidowane wewnątrz kontenera aplikacji. Program nie wymaga instalacji Pythona.
+> **Uwaga:** binaria FFmpeg oraz środowisko wykonawcze zostały skonsolidowane wewnątrz pliku wykonywalnego. Program nie wymaga instalacji Pythona.
 
 </td>
 <td width="50%" valign="top">
@@ -189,7 +201,7 @@ Dedykowane do celów rozwojowych i audytu kodu.
 **Wymagania wstępne:**
 
 - `Python >= 3.10`
-- `ffmpeg.exe` oraz `ffprobe.exe` w katalogu projektu lub w zmiennej systemowej `PATH`
+- `ffmpeg.exe` oraz `ffprobe.exe` w katalogu projektu lub w zmiennej środowiskowej `PATH`
 
 </td>
 </tr>
@@ -202,10 +214,14 @@ Dedykowane do celów rozwojowych i audytu kodu.
 git clone https://github.com/TomaszMarek/youtube-downloader.git
 cd youtube-downloader
 
-# 2. Instalacja wymaganych pakietów
+# 2. Utworzenie i aktywacja środowiska wirtualnego
+python -m venv .venv
+.venv\Scripts\activate
+
+# 3. Instalacja wymaganych pakietów
 pip install -r requirements.txt
 
-# 3. Inicjalizacja procesu aplikacji
+# 4. Inicjalizacja procesu aplikacji
 python main.py
 ```
 
@@ -221,18 +237,12 @@ python main.py
 | Przetwarzanie multimediów | FFmpeg | Multipleksowanie strumieni A/V, konwersja do MP3, tagowanie ID3 |
 | Kompilacja binarna | PyInstaller | Budowanie autonomicznego pliku wykonywalnego `.exe` |
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3776AB?style=flat-square" alt="Python">
-  <img src="https://img.shields.io/badge/CustomTkinter-2563EB?style=flat-square" alt="CustomTkinter">
-  <img src="https://img.shields.io/badge/yt--dlp-red?style=flat-square" alt="yt-dlp">
-  <img src="https://img.shields.io/badge/FFmpeg-007808?style=flat-square" alt="FFmpeg">
-  <img src="https://img.shields.io/badge/PyInstaller-FFD43B?style=flat-square" alt="PyInstaller">
-</p>
-
 ---
 
-## Licencja
+## Plan rozwoju (Roadmap)
 
-Projekt jest dystrybuowany na warunkach otwartoźródłowej licencji **MIT**. Szczegółowe postanowienia prawne znajdują się w pliku [`LICENSE`](./LICENSE).
+- **Lokalizacja metadanych (język polski)**: Wymuszenie nagłówków `Accept-Language: pl-PL` oraz flagi `extractor_args` w `yt-dlp`, eliminujące automatyczne tłumaczenie polskich tytułów filmów na język angielski.
+- **Inteligentne pomijanie YouTube Shorts**: Wdrożenie reguł filtrujących (`aspect_ratio`, detekcja URL `/shorts/` oraz czasu trwania $\le$ 60s) w oknie wyboru utworów z playlisty i w silniku pobierania.
+- **Uwierzytelnianie ciasteczkami sesyjnymi**: Obsługa parametru `cookiesfrombrowser` w konfiguracji, umożliwiająca pobieranie filmów prywatnych z uprawnieniami konta oraz materiałów z ograniczeniem wiekowym.
 
-Zgłoszenia błędów oraz propozycje zmian są mile widziane w sekcji [Issues](../../issues).
+---
